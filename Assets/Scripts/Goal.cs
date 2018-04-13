@@ -21,6 +21,7 @@ namespace KinectExercise
         {
             GameObject goalGO = new GameObject();
             goalGO.SetActive(false);
+            goalGO.name = "Goal";
             goalGO.transform.position = center;
             
             // Add a LineRenderer to display the goal

@@ -22,7 +22,8 @@ namespace KinectExercise
                 Vector3 pos = new Vector3(screenPoint.x, screenPoint.y, depth);
                 pos = MainCamera.ScreenToWorldPoint(pos);
 
-                Goal.GenerateGoal(pos, GoalRadius);
+                GameObject goal = Goal.GenerateGoal(pos, GoalRadius);
+                goal.transform.parent = gameObject.transform;
             }
         }
 
