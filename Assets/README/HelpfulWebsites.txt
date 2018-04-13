@@ -1,0 +1,23 @@
+Helpful Websites
+
+-- Kinect Unity Plugins Download Link:
+  https://go.microsoft.com/fwlink/p/?LinkId=513177
+  (accessed from https://developer.microsoft.com/en-us/windows/kinect -> scroll to "NuGet and Unity Pro add-ons")
+
+-- Kinect 2.0 SDK Download Link:
+  http://go.microsoft.com/fwlink/p/?LinkId=403899
+  (accessed from https://developer.microsoft.com/en-us/windows/kinect -> scroll to "Kinect for Windows SDK 2.0")
+
+-- Helpful Youtube Tutorial for setting up the SDK and plugins
+  https://www.youtube.com/watch?v=m3BAlJAGIkQ
+
+-- Windows 10 SDK Download (installed QFE Build 10.0.1.16299.91):
+  https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk
+
+
+===Documentation===
+-- Overall guide website
+  https://docs.microsoft.com/en-us/previous-versions/windows/kinect/dn782037%28v%3dieb.10%29
+
+-- Body Manipulation Documentation:
+  https://docs.microsoft.com/en-us/previous-versions/windows/kinect/dn799273%28v%3dieb.10%29
