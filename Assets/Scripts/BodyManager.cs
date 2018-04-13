@@ -12,6 +12,15 @@ namespace KinectExercise
         public BodyFrameReader reader;
         //public KinectManager sourceManager;
         public Body[] FrameBodyData;
+        public float BoxScale = 0.3f;
+        public float BodyScaleX = 5f;
+        public float BodyScaleY = 9f;
+        public float BodyScaleZ = 5f;
+        public static float BodyScaleX_s = 5f; // Note: Y axis scaling is weird. It has an additional multiplicative value applied.
+        public static float BodyScaleY_s = 9f;
+        public static float BodyScaleZ_s = 5f;
+        public Camera MainCamera;
+        public DisplayManager displayManager;
 
         //public BodyFrame bodyFrame;
         //public BodyFrameReader reader; // provides access to individual bodies through GetAndRefreshBodyData
@@ -61,8 +70,12 @@ namespace KinectExercise
         // Update is called once per frame
         void Update()
         {
+            BodyScaleX_s = BodyScaleX; // Make it easier to set static variable from the Editor
+            BodyScaleY_s = BodyScaleY;
+            BodyScaleZ_s = BodyScaleZ;
+
             UpdateFrameBodyData();
-            List<ulong> newBodyIDs = UpdateBodyDictionary();
+            List<ulong> newBodyIDs = IdentifyNewBodyIDs();
             RefreshBodies(newBodyIDs);
         }
         
@@ -75,8 +88,7 @@ namespace KinectExercise
             {
                 sensor.Open();
             }
-
-            Debug.Log("Trying to get sensor stuff for bodyManager");
+            
             FrameBodyData = new Body[sensor.BodyFrameSource.BodyCount];
         }
 
@@ -95,7 +107,7 @@ namespace KinectExercise
         /// <summary>
         /// Cull offscreen body tracking for the body dictionary.
         /// </summary>
-        public List<ulong> UpdateBodyDictionary()
+        public List<ulong> IdentifyNewBodyIDs()
         {
             List<ulong> newBodyIDs = new List<ulong>();
 
@@ -126,7 +138,18 @@ namespace KinectExercise
 
                 if (body.IsTracked)
                 {
+                    if (!_Bodies.ContainsKey(body.TrackingId))
+                    {
+                        Debug.Log("New trackable body found that does not exist in Bodies dictionary! " + body.TrackingId);
+                    }
                     onScreenIDs.Add(body.TrackingId);
+                }
+                else
+                {
+                    if (body.TrackingId != 0)
+                    {
+                        Debug.Log("Non tracked body found..." + body.TrackingId);
+                    }
                 }
             }
 
@@ -152,26 +175,61 @@ namespace KinectExercise
         public void RefreshBodies(List<ulong> newBodyIDs)
         {
             // Refresh a body if it exists, or create a new one if needed
-            foreach(ulong bodyID in _Bodies.Keys)
+            //foreach(ulong bodyID in _Bodies.Keys)
+            HashSet<ulong> oldOnScreenBodyIDs = new HashSet<ulong>(GetOnScreenBodyIDs());
+            oldOnScreenBodyIDs.RemoveWhere(x => newBodyIDs.Contains(x));
+            // ERROR TESTING - lambda may freeze Unity
+
+            foreach(ulong bodyID in newBodyIDs)
             {
-                if (newBodyIDs.Contains(bodyID))
+                if (!_Bodies.ContainsKey(bodyID))
                 {
                     // Create a new body character
+                    _Bodies.Add(bodyID, CreateBody(bodyID));
                 }
-                else
+            }
+
+            foreach (ulong oldBodyID in oldOnScreenBodyIDs)
+            {
+                // Refresh an existing body character
+                Body targetBody = null;
+                foreach (Body body in FrameBodyData)
                 {
-                    // Refresh an existing body character
+                    if (body.TrackingId.Equals(oldBodyID))
+                    {
+                        targetBody = body;
+                        break;
+                    }
                 }
+                RefreshBodyObject(targetBody, _Bodies[oldBodyID]);
             }
         }
 
-        public void CreateBody()
+        public GameObject CreateBody(ulong id)
         {
+            GameObject body = new GameObject("Body:" + id);
 
+            // Move the body up in front of the camera
+            Vector3 camToDisplayVector = (displayManager.DisplayPlane.transform.position - MainCamera.transform.position);
+            Vector3 bodyPos = MainCamera.transform.position + camToDisplayVector * .85f;
+            body.transform.position = bodyPos;
+            //body.transform.position = Camera.main.transform.position + Vector3.forward;
+
+            for (JointType jt = JointType.SpineBase; jt <= JointType.ThumbRight; jt++)
+            {
+                GameObject jointObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+                jointObj.transform.localScale = Vector3.one * BoxScale; //new Vector3(0.3f, 0.3f, 0.3f);
+                jointObj.name = jt.ToString();
+                jointObj.transform.parent = body.transform;
+            }
+
+            return body;
         }
 
         public void RefreshBodyObject(Body body, GameObject bodyObject)
         {
+            Vector3 spineBasePos = GetVector3FromJoint(body.Joints[JointType.SpineBase]);
             for(JointType jt = JointType.SpineBase; jt < JointType.ThumbRight; jt++)
             {
                 Windows.Kinect.Joint sourceJoint = body.Joints[jt];
@@ -183,7 +241,16 @@ namespace KinectExercise
                 }
 
                 Transform jointObj = bodyObject.transform.Find(jt.ToString());
-                jointObj.localPosition = GetVector3FromJoint(sourceJoint);
+                //jointObj.localPosition = GetVector3FromJoint(sourceJoint);
+                int ZClamp = 0;
+                Vector3 clampedPos = GetZClampedVector3FromJoint(sourceJoint, ZClamp, spineBasePos);
+                jointObj.localPosition = clampedPos;
+                //Vector3 pos = Camera.main.WorldToScreenPoint(ZClampedPos);
+                //pos.x /= Camera.main.pixelWidth;
+                //pos.y /= Camera.main.pixelHeight;
+                //jointObj.localPosition = pos;
+                ////Vector3 pos = Camera.main.WorldToViewportPoint(ZClampedPos);
+                ////jointObj.localPosition = pos;
                 
                 // Manipulate display of the body
                 
@@ -217,7 +284,15 @@ namespace KinectExercise
 
         private static Vector3 GetVector3FromJoint(Windows.Kinect.Joint joint)
         {
-            return new Vector3(joint.Position.X * 10, joint.Position.Y * 10, joint.Position.Z * 10);
+            // Only used to grab the spine base for comparison
+            //float scale = 10;
+            return new Vector3(joint.Position.X * BodyScaleX_s, joint.Position.Y * BodyScaleY_s, joint.Position.Z * BodyScaleZ_s);
+        }
+
+        private static Vector3 GetZClampedVector3FromJoint(Windows.Kinect.Joint joint, int ZClamp, Vector3 spineBasePos)
+        {
+            //float scale = 10;
+            return new Vector3(joint.Position.X * BodyScaleX_s, joint.Position.Y * BodyScaleY_s, (joint.Position.Z * BodyScaleZ_s - spineBasePos.z) + ZClamp);
         }
 
         public void CloseSensorAndReader()

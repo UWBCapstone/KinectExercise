@@ -8,7 +8,7 @@ namespace KinectExercise
     {
         public Camera MainCamera;
         public GameObject DisplayPlane;
-        public int Depth = 3;
+        public int Depth = 10;
         public Texture2D Texture;
         public ColorImageManager colorImageManager;
 
