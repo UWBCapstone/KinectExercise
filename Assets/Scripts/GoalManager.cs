@@ -21,6 +21,7 @@ namespace KinectExercise
                 Debug.Log("Generating point for screen point " + screenPoint);
                 Vector3 pos = new Vector3(screenPoint.x, screenPoint.y, depth);
                 pos = MainCamera.ScreenToWorldPoint(pos);
+                Debug.Log("Screen point translated to " + pos);
 
                 GameObject goal = Goal.GenerateGoal(pos, GoalRadius);
                 goal.transform.parent = gameObject.transform;

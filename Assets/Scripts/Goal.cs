@@ -30,6 +30,7 @@ namespace KinectExercise
             // Add a debugScript that lets you see into the goal's settings
             // and that also managers setting the LineRenderer
             GoalDebug debugScript = goalGO.AddComponent<GoalDebug>();
+            debugScript.radius = radius;
             // Add points for the circle
             List<Vector3> lrPositions = CalculateCirclePoints(center, radius, numCirclePoints);
             debugScript.SetPositions(lrPositions);
@@ -133,6 +134,16 @@ namespace KinectExercise
             }
             //Debug.Log("Opposite = " + opp);
             Vector3 pointUnNormalized = center + adj + opp;
+
+            //// Calculate radius in viewport space
+            //Vector3 comparisonPointUp = Camera.main.WorldToViewportPoint(new Vector3(0, 1, Camera.main.transform.position.z + 1));
+            //Vector3 comparisonPointCent = Camera.main.WorldToViewportPoint(new Vector3(0, 0, Camera.main.transform.position.z + 1));
+            //Vector3 comparisonVec = comparisonPointUp - comparisonPointCent;
+            //float viewportRadius = radius * comparisonVec.y;
+            //Debug.Log("ViewportRadius = radius scaled by " + comparisonVec.y);
+            //Vector3 normalizedDir = (pointUnNormalized - center).normalized * viewportRadius;
+
+
             Vector3 normalizedDir = (pointUnNormalized - center).normalized * radius;
             //Debug.Log("Normalized Direction = " + normalizedDir);
             Vector3 point = center + normalizedDir;

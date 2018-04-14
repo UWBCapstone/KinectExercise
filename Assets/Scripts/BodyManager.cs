@@ -13,12 +13,12 @@ namespace KinectExercise
         //public KinectManager sourceManager;
         public Body[] FrameBodyData;
         public float BoxScale = 0.3f;
-        public float BodyScaleX = 5f;
-        public float BodyScaleY = 9f;
-        public float BodyScaleZ = 5f;
-        public static float BodyScaleX_s = 5f; // Note: Y axis scaling is weird. It has an additional multiplicative value applied.
-        public static float BodyScaleY_s = 9f;
-        public static float BodyScaleZ_s = 5f;
+        public float BodyScaleX = 2.3f;//5f;
+        public float BodyScaleY = 4.14f;//9f;
+        public float BodyScaleZ = 2.3f;//5f;
+        public static float BodyScaleX_s = 2.3f;//5f; // Note: Y axis scaling is weird. It has an additional multiplicative value applied.
+        public static float BodyScaleY_s = 4.14f;//9f;
+        public static float BodyScaleZ_s = 2.3f;//5f;
         public Camera MainCamera;
         public DisplayManager displayManager;
 
@@ -26,7 +26,7 @@ namespace KinectExercise
         //public BodyFrameReader reader; // provides access to individual bodies through GetAndRefreshBodyData
         //public BodyFrameSource source; // bodycount (input vector for GetAndRefreshBodyData)
 
-        private Dictionary<ulong, GameObject> _Bodies = new Dictionary<ulong, GameObject>();
+        public Dictionary<ulong, GameObject> BodyMap = new Dictionary<ulong, GameObject>();
         
         private Dictionary<JointType, JointType> _BoneMap = new Dictionary<JointType, JointType>()
     {
@@ -117,7 +117,7 @@ namespace KinectExercise
             // Figure out which body IDs are new
             foreach(var onScreenID in onScreenIDs)
             {
-                if (!_Bodies.ContainsKey(onScreenID))
+                if (!BodyMap.ContainsKey(onScreenID))
                 {
                     newBodyIDs.Add(onScreenID);
                 }
@@ -138,7 +138,7 @@ namespace KinectExercise
 
                 if (body.IsTracked)
                 {
-                    if (!_Bodies.ContainsKey(body.TrackingId))
+                    if (!BodyMap.ContainsKey(body.TrackingId))
                     {
                         Debug.Log("New trackable body found that does not exist in Bodies dictionary! " + body.TrackingId);
                     }
@@ -158,7 +158,7 @@ namespace KinectExercise
 
         public void CullOffscreenBodies(List<ulong> onScreenIDs)
         {
-            List<ulong> knownIDs = new List<ulong>(_Bodies.Keys);
+            List<ulong> knownIDs = new List<ulong>(BodyMap.Keys);
 
             // Cull the 
             foreach (ulong knownID in knownIDs)
@@ -166,8 +166,8 @@ namespace KinectExercise
                 if (!onScreenIDs.Contains(knownID))
                 {
                     ulong offScreenID = knownID;
-                    Destroy(_Bodies[offScreenID]);
-                    _Bodies.Remove(offScreenID);
+                    Destroy(BodyMap[offScreenID]);
+                    BodyMap.Remove(offScreenID);
                 }
             }
         }
@@ -182,10 +182,10 @@ namespace KinectExercise
 
             foreach(ulong bodyID in newBodyIDs)
             {
-                if (!_Bodies.ContainsKey(bodyID))
+                if (!BodyMap.ContainsKey(bodyID))
                 {
                     // Create a new body character
-                    _Bodies.Add(bodyID, CreateBody(bodyID));
+                    BodyMap.Add(bodyID, CreateBody(bodyID));
                 }
             }
 
@@ -201,7 +201,7 @@ namespace KinectExercise
                         break;
                     }
                 }
-                RefreshBodyObject(targetBody, _Bodies[oldBodyID]);
+                RefreshBodyObject(targetBody, BodyMap[oldBodyID]);
             }
         }
 
@@ -217,7 +217,14 @@ namespace KinectExercise
 
             for (JointType jt = JointType.SpineBase; jt <= JointType.ThumbRight; jt++)
             {
-                GameObject jointObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                GameObject jointObj;
+                if (jt.Equals(JointType.WristRight))
+                {
+                    jointObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                }
+                else { 
+                    jointObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                }
 
                 jointObj.transform.localScale = Vector3.one * BoxScale; //new Vector3(0.3f, 0.3f, 0.3f);
                 jointObj.name = jt.ToString();
@@ -229,8 +236,11 @@ namespace KinectExercise
 
         public void RefreshBodyObject(Body body, GameObject bodyObject)
         {
-            Vector3 spineBasePos = GetVector3FromJoint(body.Joints[JointType.SpineBase]);
-            for(JointType jt = JointType.SpineBase; jt < JointType.ThumbRight; jt++)
+            Windows.Kinect.Joint spineJoint = body.Joints[JointType.SpineBase];
+            Vector3 spineBasePos = GetVector3FromJoint(spineJoint);
+            Vector3 spineBaseOrig = new Vector3(spineJoint.Position.X, spineJoint.Position.Y, spineJoint.Position.Z);
+
+            for (JointType jt = JointType.SpineBase; jt < JointType.ThumbRight; jt++)
             {
                 Windows.Kinect.Joint sourceJoint = body.Joints[jt];
                 Windows.Kinect.Joint? targetJoint = null;
@@ -242,18 +252,22 @@ namespace KinectExercise
 
                 Transform jointObj = bodyObject.transform.Find(jt.ToString());
                 //jointObj.localPosition = GetVector3FromJoint(sourceJoint);
+
                 int ZClamp = 0;
                 Vector3 clampedPos = GetZClampedVector3FromJoint(sourceJoint, ZClamp, spineBasePos);
+                clampedPos = ScaleXY(clampedPos, sourceJoint, spineBaseOrig);
                 jointObj.localPosition = clampedPos;
+
+
                 //Vector3 pos = Camera.main.WorldToScreenPoint(ZClampedPos);
                 //pos.x /= Camera.main.pixelWidth;
                 //pos.y /= Camera.main.pixelHeight;
                 //jointObj.localPosition = pos;
                 ////Vector3 pos = Camera.main.WorldToViewportPoint(ZClampedPos);
                 ////jointObj.localPosition = pos;
-                
+
                 // Manipulate display of the body
-                
+
 
                 //LineRenderer lr = jointObj.GetComponent<LineRenderer>();
                 //if (targetJoint.HasValue)
@@ -293,6 +307,31 @@ namespace KinectExercise
         {
             //float scale = 10;
             return new Vector3(joint.Position.X * BodyScaleX_s, joint.Position.Y * BodyScaleY_s, (joint.Position.Z * BodyScaleZ_s - spineBasePos.z) + ZClamp);
+        }
+
+        private static Vector3 ScaleXY(Vector3 orig, Windows.Kinect.Joint joint, Vector3 jointSpinePos)
+        {
+            float opp1X = joint.Position.X - jointSpinePos.x;
+            float adj2 = orig.z;
+            float adj1 = joint.Position.Z;
+
+            float opp1Y = joint.Position.Y - jointSpinePos.y;
+
+            float scaleX = opp1X * adj2 / adj1;
+            float scaleY = opp1Y * adj2 / adj1;
+
+            if (joint.JointType.Equals(JointType.WristRight))
+            {
+                Debug.Log("Scaling for joint " + joint.JointType.ToString() + "...");
+                Debug.Log("\tXScale = " + scaleX);
+                Debug.Log("\tYScale = " + scaleY);
+                Debug.Log("\tOrig X = " + orig.x);
+                Debug.Log("\tOrig Y = " + orig.y);
+                Debug.Log("\tjoint Pos.z = " + adj1);
+                Debug.Log("\tadj2 = " + adj2);
+            }
+            
+            return orig + new Vector3(Mathf.Abs(orig.x * scaleX), Mathf.Abs(orig.y * scaleY), 0);
         }
 
         public void CloseSensorAndReader()

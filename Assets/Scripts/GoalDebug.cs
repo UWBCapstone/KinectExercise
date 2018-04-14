@@ -70,14 +70,32 @@ namespace KinectExercise
 
         public bool GoalMet(Vector3 position)
         {
-            // if the position passed in is within the radius of the lastPosition recorded, the goal is met
-            // Ignore alignment on the Z axis
-            Vector2 pos = new Vector2(position.x, position.y);
-            Vector2 cent = new Vector2(lastPosition.x, lastPosition.y);
+            //// if the position passed in is within the radius of the lastPosition recorded, the goal is met
+            //// Ignore alignment on the Z axis
+            //Vector2 pos = new Vector2(position.x, position.y);
+            //Vector2 cent = new Vector2(lastPosition.x, lastPosition.y);
+
+            Vector3 posViewPort = Camera.main.WorldToViewportPoint(position);
+            Vector3 centViewPort = Camera.main.WorldToViewportPoint(lastPosition);
+
+            Vector2 pos = new Vector2(posViewPort.x, posViewPort.y);
+            Vector2 cent = new Vector2(centViewPort.x, centViewPort.y);
+
+            Debug.Log("Pos = " + pos);
+            Debug.Log("Cent = " + cent);
 
             float magnitude = (cent - pos).magnitude;
 
-            return magnitude <= radius;
+            Vector3 comparativeCirclePos = lastPosition + Vector3.left * radius;
+            Vector3 comparativeCirclePosViewPort = Camera.main.WorldToViewportPoint(comparativeCirclePos);
+            Vector2 comp = new Vector2(comparativeCirclePosViewPort.x, comparativeCirclePosViewPort.y);
+
+            float comparisonMagnitude = (cent - comp).magnitude;
+
+            Debug.Log("Magnitude = " + magnitude + "; Radius = " + comparisonMagnitude);
+
+            //return magnitude <= radius;
+            return magnitude <= comparisonMagnitude;
         }
 
         public bool GoalMet(Windows.Kinect.CameraSpacePoint point)
@@ -120,7 +138,7 @@ namespace KinectExercise
                     for(int i = 0; i < LineRenderPositions.Count; i++)
                     {
                         lr.SetPosition(i, LineRenderPositions[i]);
-                        Debug.Log("Adding pos " + LineRenderPositions[i] + " to linerenderer");
+                        //Debug.Log("Adding pos " + LineRenderPositions[i] + " to linerenderer");
                     }
                 }
                 if (color != null)
