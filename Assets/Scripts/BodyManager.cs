@@ -8,6 +8,7 @@ namespace KinectExercise
 {
     public class BodyManager : MonoBehaviour
     {
+        public bool debugging = false;
         public KinectSensor sensor;
         public BodyFrameReader reader;
         //public KinectManager sourceManager;
@@ -21,6 +22,7 @@ namespace KinectExercise
         public static float BodyScaleZ_s = 2.3f;//5f;
         public Camera MainCamera;
         public DisplayManager displayManager;
+        public List<JointType> visibleJointTypes;
 
         //public BodyFrame bodyFrame;
         //public BodyFrameReader reader; // provides access to individual bodies through GetAndRefreshBodyData
@@ -59,7 +61,6 @@ namespace KinectExercise
         { JointType.SpineShoulder, JointType.Neck },
         { JointType.Neck, JointType.Head },
     };
-
 
         // Use this for initialization
         void Awake()
@@ -185,7 +186,14 @@ namespace KinectExercise
                 if (!BodyMap.ContainsKey(bodyID))
                 {
                     // Create a new body character
-                    BodyMap.Add(bodyID, CreateBody(bodyID));
+                    if (!debugging)
+                    {
+                        BodyMap.Add(bodyID, CreateBody(bodyID, visibleJointTypes));
+                    }
+                    else
+                    {
+                        BodyMap.Add(bodyID, CreateBody(bodyID));
+                    }
                 }
             }
 
@@ -205,7 +213,7 @@ namespace KinectExercise
             }
         }
 
-        public GameObject CreateBody(ulong id)
+        public GameObject CreateBody(ulong id, List<JointType> visibleJoints)
         {
             GameObject body = new GameObject("Body:" + id);
 
@@ -215,16 +223,14 @@ namespace KinectExercise
             body.transform.position = bodyPos;
             //body.transform.position = Camera.main.transform.position + Vector3.forward;
 
-            for (JointType jt = JointType.SpineBase; jt <= JointType.ThumbRight; jt++)
+            Debug.Log("Creating new body of joint count " + visibleJoints.Count);
+            //for (JointType jt = JointType.SpineBase; jt <= JointType.ThumbRight; jt++)
+            for(int i = 0; i < visibleJoints.Count; i++)
             {
-                GameObject jointObj;
-                if (jt.Equals(JointType.WristRight))
-                {
-                    jointObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                }
-                else { 
-                    jointObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                }
+                Debug.Log("Adding visible joint object: " + visibleJoints[i].ToString());
+
+                JointType jt = visibleJoints[i];
+                GameObject jointObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
                 jointObj.transform.localScale = Vector3.one * BoxScale; //new Vector3(0.3f, 0.3f, 0.3f);
                 jointObj.name = jt.ToString();
@@ -232,6 +238,16 @@ namespace KinectExercise
             }
 
             return body;
+        }
+
+        public GameObject CreateBody(ulong id)
+        {
+            List<JointType> allJointTypes = new List<JointType>();
+            foreach(JointType jt in System.Enum.GetValues(typeof(JointType)))
+            {
+                allJointTypes.Add(jt);
+            }
+            return CreateBody(id, allJointTypes);
         }
 
         public void RefreshBodyObject(Body body, GameObject bodyObject)
@@ -320,16 +336,16 @@ namespace KinectExercise
             float scaleX = opp1X * adj2 / adj1;
             float scaleY = opp1Y * adj2 / adj1;
 
-            if (joint.JointType.Equals(JointType.WristRight))
-            {
-                Debug.Log("Scaling for joint " + joint.JointType.ToString() + "...");
-                Debug.Log("\tXScale = " + scaleX);
-                Debug.Log("\tYScale = " + scaleY);
-                Debug.Log("\tOrig X = " + orig.x);
-                Debug.Log("\tOrig Y = " + orig.y);
-                Debug.Log("\tjoint Pos.z = " + adj1);
-                Debug.Log("\tadj2 = " + adj2);
-            }
+            //if (joint.JointType.Equals(JointType.WristRight))
+            //{
+            //    Debug.Log("Scaling for joint " + joint.JointType.ToString() + "...");
+            //    Debug.Log("\tXScale = " + scaleX);
+            //    Debug.Log("\tYScale = " + scaleY);
+            //    Debug.Log("\tOrig X = " + orig.x);
+            //    Debug.Log("\tOrig Y = " + orig.y);
+            //    Debug.Log("\tjoint Pos.z = " + adj1);
+            //    Debug.Log("\tadj2 = " + adj2);
+            //}
             
             return orig + new Vector3(Mathf.Abs(orig.x * scaleX), Mathf.Abs(orig.y * scaleY), 0);
         }
@@ -356,6 +372,47 @@ namespace KinectExercise
         public void OnApplicationQuit()
         {
             CloseSensorAndReader();
+        }
+
+        public Windows.Kinect.Joint GetJoint(JointType jointType)
+        {
+            Windows.Kinect.Joint j = new Windows.Kinect.Joint();
+            j.TrackingState = TrackingState.NotTracked;
+
+            foreach(Body body in FrameBodyData)
+            {
+                if (body != null
+                    && body.IsTracked)
+                {
+                    j = body.Joints[jointType];
+                }
+            }
+
+            return j;
+        }
+
+        public static bool isValidJoint(Windows.Kinect.Joint joint)
+        {
+            if (joint.TrackingState.Equals(TrackingState.NotTracked))
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        public void SetVisibleJoints(List<JointType> visibleJointTypesList)
+        {
+            if(visibleJointTypesList == null)
+            {
+                visibleJointTypes = new List<JointType>();
+            }
+            else
+            {
+                visibleJointTypes = new List<JointType>(visibleJointTypesList);
+            }
         }
     }
 }

@@ -10,11 +10,12 @@ namespace KinectExercise
     {
         public Camera MainCamera;
         public float GoalRadius = 1.0f;
-        public HashSet<GameObject> goalGOs;
-        private Dictionary<JointType, GameObject> jointTypeToGoal;
+        public HashSet<GameObject> goalGOs = new HashSet<GameObject>();
+        private Dictionary<JointType, GameObject> jointTypeToGoal = new Dictionary<JointType, GameObject>();
 
-        public void GenerateGoalsAt(List<Vector2> cameraUVPoints, float depth)
+        public List<GameObject> GenerateGoalsAt(List<Vector2> cameraUVPoints, float depth)
         {
+            List<GameObject> goalGOs = new List<GameObject>();
             foreach(Vector2 uvPoint in cameraUVPoints)
             {
                 Vector2 screenPoint = CameraUVPointToScreenSpace(uvPoint, MainCamera);
@@ -25,10 +26,13 @@ namespace KinectExercise
 
                 GameObject goal = Goal.GenerateGoal(pos, GoalRadius);
                 goal.transform.parent = gameObject.transform;
+                goalGOs.Add(goal);
             }
+
+            return goalGOs;
         }
 
-        public void GenerateGoalsAt(List<Vector2> cameraUVPoints, List<float> depths)
+        public List<GameObject> GenerateGoalsAt(List<Vector2> cameraUVPoints, List<float> depths)
         {
             if (cameraUVPoints != null
                 && depths != null)
@@ -37,8 +41,8 @@ namespace KinectExercise
                 {
                     if (depths.Count > 0)
                     {
-                        GenerateGoalsAt(cameraUVPoints, depths[0]);
                         Debug.LogError("Depths list does not have the same size as cameraUVPoints list.");
+                        return GenerateGoalsAt(cameraUVPoints, depths[0]);
                     }
                 }
             }
@@ -46,6 +50,8 @@ namespace KinectExercise
             {
                 Debug.LogError("Depths list or cameraUVPointsList are null");
             }
+
+            return null;
         }
 
         private static Vector2 CameraUVPointToScreenSpace(Vector2 cameraUVPoint, Camera cam)
@@ -64,6 +70,24 @@ namespace KinectExercise
                     goalGOs.Add(go);
                 }
             }
+        }
+
+        public void SetGoals(List<JointType> jointList, List<GameObject> goList)
+        {
+            Dictionary<JointType, GameObject> jointTypeToGoalDictionary = new Dictionary<JointType, GameObject>();
+            for (int i = 0; i < jointList.Count; i++)
+            {
+                Debug.Log("Set Goals: i = " + i);
+                if (goList[i] != null)
+                {
+                    Debug.Log("jointList i = " + jointList[i]);
+                    Debug.Log("goList i = " + goList[i]);
+
+                    jointTypeToGoalDictionary.Add(jointList[i], goList[i]);
+                }
+            }
+
+            SetGoals(jointTypeToGoalDictionary);
         }
 
         public void ClearGoals()
@@ -88,7 +112,14 @@ namespace KinectExercise
 
         public bool GoalMet(Windows.Kinect.Joint joint)
         {
-            return GoalMet(jointTypeToGoal[joint.JointType], joint);
+            if (jointTypeToGoal.ContainsKey(joint.JointType))
+            {
+                return GoalMet(jointTypeToGoal[joint.JointType], joint);
+            }
+            else
+            {
+                return false;
+            }
         }
         
         public bool GoalMet(GameObject goalGO, Windows.Kinect.Joint joint)
@@ -117,6 +148,10 @@ namespace KinectExercise
         public bool AllGoalsMet(List<Windows.Kinect.Joint> jointList)
         {
             List<JointType> keys = new List<JointType>(jointTypeToGoal.Keys);
+            if(keys.Count == 0)
+            {
+                return false;
+            }
 
             bool allGoalsMetForJointList = true;
             for(int i = 0; i < jointList.Count; i++)

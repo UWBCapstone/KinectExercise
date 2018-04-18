@@ -7,12 +7,17 @@ namespace KinectExercise
     public class SceneDirector : MonoBehaviour
     {
         public GoalManager goalManager;
+        public BodyManager bodyManager;
         public float GoalDepth = 2.0f;
         public Vector2[] goalUVs = new Vector2[8];
+        public Windows.Kinect.JointType[] goalJoints = new Windows.Kinect.JointType[8];
 
+        private List<GameObject> generatedGoals = new List<GameObject>();
         
-        public void GenerateGoals()
+        public List<GameObject> GenerateGoals()
         {
+            List<GameObject> goalGOs = new List<GameObject>();
+
             List<Vector2> goalUVList = new List<Vector2>();
             for(int i = 0; i < goalUVs.Length; i++)
             {
@@ -21,12 +26,17 @@ namespace KinectExercise
                     goalUVList.Add(goalUVs[i]);
                 }
             }
-            goalManager.GenerateGoalsAt(goalUVList, GoalDepth);
+            goalGOs = goalManager.GenerateGoalsAt(goalUVList, GoalDepth);
+
+            return goalGOs;
         }
 
         public void Awake()
         {
-            GenerateGoals();
+            generatedGoals = GenerateGoals();
+            goalManager.SetGoals(GetValidGoalJointsList(), generatedGoals);
+            
+            bodyManager.SetVisibleJoints(GetValidGoalJointsList());
         }
 
         public void Update()
@@ -42,30 +52,57 @@ namespace KinectExercise
             //    body.transform.GetChild()
             //}
 
-            GameObject WristRight = GameObject.Find("WristRight");
+            List<Windows.Kinect.JointType> goalJointTypesList = GetValidGoalJointsList();
+            List<Windows.Kinect.Joint> goalJointsList = new List<Windows.Kinect.Joint>();
 
-            GameObject goalManager = GameObject.Find("GoalManager");
-
-            // Debug whether the goals are met
-            for (int childIndex = 0; childIndex < goalManager.transform.childCount; childIndex++)
+            for(int i = 0; i < goalJointTypesList.Count; i++)
             {
-                GameObject child = goalManager.transform.GetChild(childIndex).gameObject;
-                GoalDebug g = child.GetComponent<GoalDebug>();
-                if (g != null)
+                Windows.Kinect.JointType jt = goalJointTypesList[i];
+                Windows.Kinect.Joint j = bodyManager.GetJoint(jt);
+                goalJointsList.Add(j);
+
+                bool goalMetForJoint = goalManager.GoalMet(j);
+                if (goalMetForJoint)
                 {
-                    if (WristRight != null)
-                    {
-                        if (g.GoalMet(WristRight.transform.position))
-                        {
-                            Debug.Log("Goal met!");
-                        }
-                    }
+                    Debug.Log("Joint[" + jt.ToString() + "] Goal Met!");
+                }
+            }
+
+            if (goalManager.AllGoalsMet(goalJointsList))
+            {
+                Debug.Log("SUCCESS: All joint goals met!");
+            }
+        }
+
+        public int GetNumValidGoals()
+        {
+            int numValidGoals = 0;
+            for(int i = 0; i < goalUVs.Length; i++)
+            {
+                if (goalUVs[i].Equals(Vector2.zero))
+                {
+                    break;
                 }
                 else
                 {
-                    Debug.Log("Child had no goalDebug script.");
+                    numValidGoals++;
                 }
             }
+
+            return numValidGoals;
+        }
+
+        public List<Windows.Kinect.JointType> GetValidGoalJointsList()
+        {
+            List<Windows.Kinect.JointType> validGoalJointsList = new List<Windows.Kinect.JointType>();
+            int numValidJointTypes = GetNumValidGoals();
+
+            for(int i = 0; i < numValidJointTypes; i++)
+            {
+                validGoalJointsList.Add(goalJoints[i]);
+            }
+
+            return validGoalJointsList;
         }
     }
 }

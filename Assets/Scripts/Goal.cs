@@ -34,6 +34,7 @@ namespace KinectExercise
             // Add points for the circle
             List<Vector3> lrPositions = CalculateCirclePoints(center, radius, numCirclePoints);
             debugScript.SetPositions(lrPositions);
+            lr.material = GenerateGoalMaterial();
 
             goalGO.SetActive(true);
 
@@ -153,12 +154,11 @@ namespace KinectExercise
 
         private static Material GenerateGoalMaterial()
         {
-            Material goalMat = new Material(Shader.Find("Custom/GoalShader"));
+            Material goalMat = new Material(Shader.Find("Standard"));
             goalMat.name = "GoalMaterial";
+            goalMat.SetColor("_Color", Color.blue);
 
             return goalMat;
         }
-
-
     }
 }
