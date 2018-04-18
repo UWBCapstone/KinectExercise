@@ -12,6 +12,7 @@ namespace KinectExercise
         public float GoalRadius = 1.0f;
         public HashSet<GameObject> goalGOs = new HashSet<GameObject>();
         private Dictionary<JointType, GameObject> jointTypeToGoal = new Dictionary<JointType, GameObject>();
+        public BodyManager bodyManager;
 
         public List<GameObject> GenerateGoalsAt(List<Vector2> cameraUVPoints, float depth)
         {
@@ -114,7 +115,7 @@ namespace KinectExercise
         {
             if (jointTypeToGoal.ContainsKey(joint.JointType))
             {
-                return GoalMet(jointTypeToGoal[joint.JointType], joint);
+                return GoalMet(jointTypeToGoal[joint.JointType], bodyManager.GetJointObject(joint.JointType));
             }
             else
             {
@@ -122,7 +123,7 @@ namespace KinectExercise
             }
         }
         
-        public bool GoalMet(GameObject goalGO, Windows.Kinect.Joint joint)
+        public bool GoalMet(GameObject goalGO, GameObject jointObj)
         {
             bool goalMet = false;
 
@@ -131,7 +132,8 @@ namespace KinectExercise
                 GoalDebug goal = goalGO.GetComponent<GoalDebug>();
                 if(goal != null)
                 {
-                    goalMet = goal.GoalMet(joint.Position);
+                    //goalMet = goal.GoalMet(joint.Position);
+                    goalMet = goal.GoalMet(jointObj.transform.position);
                 }
             }
 
@@ -142,7 +144,10 @@ namespace KinectExercise
         void Start()
         {
             goalGOs = new HashSet<GameObject>();
-            jointTypeToGoal = new Dictionary<JointType, GameObject>();
+            if (jointTypeToGoal == null)
+            {
+                jointTypeToGoal = new Dictionary<JointType, GameObject>();
+            }
         }
 
         public bool AllGoalsMet(List<Windows.Kinect.Joint> jointList)

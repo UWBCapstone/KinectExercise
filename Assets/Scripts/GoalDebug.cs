@@ -98,15 +98,15 @@ namespace KinectExercise
             return magnitude <= comparisonMagnitude;
         }
 
-        public bool GoalMet(Windows.Kinect.CameraSpacePoint point)
-        {
-            Vector2 pos = new Vector2(point.X, point.Y);
-            Vector2 cent = new Vector2(lastPosition.x, lastPosition.y);
+        //public bool GoalMet(Windows.Kinect.CameraSpacePoint point)
+        //{
+        //    Vector2 pos = new Vector2(point.X, point.Y);
+        //    Vector2 cent = new Vector2(lastPosition.x, lastPosition.y);
 
-            float magnitude = (cent - pos).magnitude;
+        //    float magnitude = (cent - pos).magnitude;
 
-            return magnitude <= radius;
-        }
+        //    return magnitude <= radius;
+        //}
 
         public override string ToString()
         {

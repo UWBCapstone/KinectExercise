@@ -61,6 +61,7 @@ namespace KinectExercise
                 Windows.Kinect.Joint j = bodyManager.GetJoint(jt);
                 goalJointsList.Add(j);
 
+                GameObject jointObj = bodyManager.GetJointObject(jt);
                 bool goalMetForJoint = goalManager.GoalMet(j);
                 if (goalMetForJoint)
                 {

@@ -272,7 +272,10 @@ namespace KinectExercise
                 int ZClamp = 0;
                 Vector3 clampedPos = GetZClampedVector3FromJoint(sourceJoint, ZClamp, spineBasePos);
                 clampedPos = ScaleXY(clampedPos, sourceJoint, spineBaseOrig);
-                jointObj.localPosition = clampedPos;
+                if (jointObj != null)
+                {
+                    jointObj.localPosition = clampedPos;
+                }
 
 
                 //Vector3 pos = Camera.main.WorldToScreenPoint(ZClampedPos);
@@ -322,7 +325,8 @@ namespace KinectExercise
         private static Vector3 GetZClampedVector3FromJoint(Windows.Kinect.Joint joint, int ZClamp, Vector3 spineBasePos)
         {
             //float scale = 10;
-            return new Vector3(joint.Position.X * BodyScaleX_s, joint.Position.Y * BodyScaleY_s, (joint.Position.Z * BodyScaleZ_s - spineBasePos.z) + ZClamp);
+            //return new Vector3(joint.Position.X * BodyScaleX_s, joint.Position.Y * BodyScaleY_s, (joint.Position.Z * BodyScaleZ_s - spineBasePos.z) + ZClamp);
+            return new Vector3(joint.Position.X * BodyScaleX_s, joint.Position.Y * BodyScaleY_s, ZClamp);
         }
 
         private static Vector3 ScaleXY(Vector3 orig, Windows.Kinect.Joint joint, Vector3 jointSpinePos)
@@ -413,6 +417,12 @@ namespace KinectExercise
             {
                 visibleJointTypes = new List<JointType>(visibleJointTypesList);
             }
+        }
+
+        public GameObject GetJointObject(JointType jointType)
+        {
+            GameObject jointObj = GameObject.Find(jointType.ToString());
+            return jointObj;
         }
     }
 }
